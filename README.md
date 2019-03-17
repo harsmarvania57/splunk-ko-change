@@ -69,7 +69,7 @@ Bulk modify Splunk Knowledge Object's owners, permissions, apps, sharing and mov
   </tbody>
 </table>
 
-**NOTE: When you change sharing permission from `user` to `app` or `global` and if you do not provide `--readperm` and `--writeperm` parameter while changing permission then by default Read and Write Permission will be Everyone**
+**NOTE: When you change sharing permission from `user` to `app` or `global` and if you do not provide `--readperm` and `--writeperm` parameter while changing permission then by default it will inherit App read and write permission respectively.**
 
 ### How to use script (Examples)
 #### To check which knowledge objects you can move using `ko_change.py` script and for available script parameter you can use help as given below

@@ -289,9 +289,7 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
                                 else:
                                     post_argument = {'sharing': new_sharing, 'owner': new_owner, 'perms.read': read_perm, 'perms.write': new_writeperm}
                             else:
-                                new_readperm = '*'
-                                new_writeperm = '*'
-                                post_argument = {'sharing': new_sharing, 'owner': new_owner, 'perms.read': new_readperm, 'perms.write': new_writeperm}
+                                post_argument = {'sharing': new_sharing, 'owner': new_owner}
                         else:
                             post_argument = {'sharing': new_sharing, 'owner': new_owner}
                     elif new_readperm:
@@ -325,9 +323,7 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
                             else:
                                 post_argument = {'sharing': new_sharing, 'owner': author_name, 'perms.read': read_perm, 'perms.write': new_writeperm}
                         else:
-                            new_readperm = '*'
-                            new_writeperm = '*'
-                            post_argument = {'sharing': new_sharing, 'owner': author_name, 'perms.read': new_readperm, 'perms.write': new_writeperm}
+                            post_argument = {'sharing': new_sharing, 'owner': author_name}
                     else:
                         post_argument = {'sharing': new_sharing, 'owner': author_name}
                 elif new_readperm:
