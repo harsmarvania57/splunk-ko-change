@@ -1,6 +1,8 @@
 # splunk-ko-change
 Bulk modify Splunk Knowledge Object's owners, permissions, apps, sharing and move them to another app. To change permission, owner or move knowledge object with script given in this repository you require Splunk Admin privilege.
 
+Python script which is provided in this repo works fine on stand alone search head and Search Head Cluster(SHC). When you have Search Head Cluster(SHC) you need to run this script on one of the search head member(Not on all).
+
 ### Type of Knowledge Objects and what you can change with this script
 
 <table>
