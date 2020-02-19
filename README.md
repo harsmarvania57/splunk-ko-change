@@ -200,6 +200,9 @@ search        bob           Test_Savedsearch4   savedsearch   global        admi
 In below example we will change selected savedsearches owned by any user to "bob" user in all splunk apps. I have created `savedsearch.txt` file and mentioned `Test_Savedsearch2` and `Test_Savedsearch3` as given below.
 
 ```
+[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt
+Test_Savedsearch2
+Test_Savedsearch3
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --newuser bob
 Enter username with admin privileges: admin
 Enter password: 

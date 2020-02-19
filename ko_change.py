@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import input
+from io import open
 import sys
 import splunk.rest as rest
 import splunk.auth as auth
@@ -6,6 +9,7 @@ import json
 import argparse
 import getpass
 import re
+
 
 ko_details = []
 
@@ -17,15 +21,24 @@ def argument_parser():
         
         # Create argument parser to list the data
         list_parser = subparsers.add_parser('list', help='List splunk knowledge objects')
-        list_ko_subparser = list_parser.add_subparsers(dest='list_ko_name', help='Knowledge Object Choices')
+        if sys.version_info[0] < 3:
+            list_ko_subparser = list_parser.add_subparsers(dest='list_ko_name', help='Knowledge Object Choices')
+        else:
+            list_ko_subparser = list_parser.add_subparsers(dest='list_ko_name', required=True, help='Knowledge Object Choices')
         
         # Create argument parser for change permission of Knowledge objects
         change_parser = subparsers.add_parser('change', help='Change ownership, read & write permission and sharing of splunk knowledge objects')
-        change_ko_subparser = change_parser.add_subparsers(dest='change_ko_name', help='Knowledge Object Choices')
+        if sys.version_info[0] < 3:
+            change_ko_subparser = change_parser.add_subparsers(dest='change_ko_name', help='Knowledge Object Choices')
+        else:
+            change_ko_subparser = change_parser.add_subparsers(dest='change_ko_name', required=True, help='Knowledge Object Choices')
         
         # Create argument parser for move of Knowledge objects 
         move_parser = subparsers.add_parser('move', help='Move knowledge objects to another app')
-        move_ko_subparser = move_parser.add_subparsers(dest='move_ko_name', help='Knowledge Object Choices')
+        if sys.version_info[0] < 3:
+            move_ko_subparser = move_parser.add_subparsers(dest='move_ko_name', help='Knowledge Object Choices')
+        else:
+            move_ko_subparser = move_parser.add_subparsers(dest='move_ko_name', required=True, help='Knowledge Object Choices')
         
         ko_type_args = ['savedsearch', 'dashboard', 'lookupdef', 'lookupfile', 'tag', 'field_extraction', 'panel', 'field_transformation', 'workflow_action']
         
@@ -73,7 +86,7 @@ def argument_parser():
 
 def user_check(ko_value):
     try:
-        username = raw_input('Enter username with admin privileges: ')
+        username = input('Enter username with admin privileges: ')
         password = getpass.getpass('Enter password: ')
         session_key = auth.getSessionKey(username, password)
         
@@ -83,7 +96,7 @@ def user_check(ko_value):
             if new_owner:
                 userlist = auth.getUser(name=new_owner)
                 if not userlist:
-                    print 'New owner ' + new_owner + ' not found in splunk'
+                    print('New owner ' + new_owner + ' not found in splunk')
                     sys.exit(1)
         return session_key
     except:
@@ -94,7 +107,7 @@ def role_check(role):
     try:
         getrole = auth.listRoles()
         if role not in getrole:
-            print 'Role ' + role + ' not found in splunk'
+            print('Role ' + role + ' not found in splunk')
             sys.exit(1)
         return True
     except:
@@ -103,10 +116,10 @@ def role_check(role):
 # Check app
 def app_check(app, session_key):
     try:
-        getapp = entity.getEntities('apps/local', search='visible=1 AND disabled=0', namespace=None, count=-1, sessionKey=session_key).keys()
+        getapp = list(entity.getEntities('apps/local', search='visible=1 AND disabled=0', namespace=None, count=-1, sessionKey=session_key).keys())
         
         if app not in getapp:
-            print 'App ' + app + ' not found in splunk'
+            print('App ' + app + ' not found in splunk')
             sys.exit(1)
         return True
     except:
@@ -151,7 +164,7 @@ def retrieve_content(session_key, ko_name, owner, file=None):
     ko_details.append(['===========', '===========', '===========', '===========', '===========', '===========', '===========', '===========', '==========='])
     
     # Search knowledge objects for user from all users output and append into ko_details list.
-    for i in xrange(len(ko_config['entry'])):
+    for i in range(len(ko_config['entry'])):
         if owner:
             author_name = ko_config['entry'][i]['author']
             if author_name == owner :
@@ -183,7 +196,7 @@ def retrieve_content(session_key, ko_name, owner, file=None):
 
     
         if file:
-            with open(file, 'rb') as read_f:
+            with open(file, encoding='utf-8') as read_f:
                 f_content = read_f.read().splitlines()
             for f_title in f_content:
                 ko_title = ko_config['entry'][i]['name']
@@ -216,10 +229,10 @@ def retrieve_content(session_key, ko_name, owner, file=None):
     
     # Check if user have any knowledge object or not and then print message and exit the script if no knowledge objects found.
     if len(ko_details) <= 2 :
-        print 'No ' + ko_name + ' found'
+        print('No ' + ko_name + ' found')
         sys.exit(1)
     else:
-        print 'Total ' + str(len(ko_details)-2) + ' ' + ko_name + ' found'
+        print('Total ' + str(len(ko_details)-2) + ' ' + ko_name + ' found')
         col_array = []
         
         # Searching maximum length for every row in each column and adding 2 for padding & store them into col_array list
@@ -230,13 +243,13 @@ def retrieve_content(session_key, ko_name, owner, file=None):
         # Print ko_details list and inogre 4th column "List URL" while printing
         for row in ko_details:
             j = 0
-            print ''
+            print('')
             for index, string in enumerate(row):
                 if index != 4:
-                    print ''.join(string.ljust(col_array[j])),
+                    print(''.join(string.ljust(col_array[j])), end=' ')
                 j = j + 1
                 
-        print '\n'
+        print('\n')
         return ko_details, col_array
 
 # Change permission of knowledge objects 
@@ -244,7 +257,7 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
     try:
         # Retrieve knowledge objects
         (ko_details, col_array) = retrieve_content(session_key, ko_name, old_owner, file)
-        user_input = raw_input('Do you want to change now?[y/n] ').lower()
+        user_input = input('Do you want to change now?[y/n] ').lower()
         
         if user_input == 'y':
             col_array.append(9)
@@ -255,10 +268,10 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
             # Print first 2 array from ko_details and ignore 4th column "List URL" while printing.
             for row in ko_details[:2]:
                 j = 0
-                print ''
+                print('')
                 for index, string in enumerate(row):
                     if index != 4:
-                        print ''.join(string.ljust(col_array[j])),
+                        print(''.join(string.ljust(col_array[j])), end=' ')
                     j = j + 1
 			
             # Change permission and print column starting from 3rd array and ignore 4th column "List URL" while printing.
@@ -353,22 +366,22 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
                     ko_details[data_index].append('Changed')
                     ko_array_value = ko_details[data_index]
                     j = 0
-                    print ''
+                    print('')
                     
                     for index, string in enumerate(ko_array_value):
                         if index != 4:
-                            print ''.join(string.ljust(col_array[j])),
+                            print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                 except:
                     data_index = ko_details.index(row)
                     ko_details[data_index].append('Failed')
                     ko_array_value = ko_details[data_index]
                     j = 0
-                    print ''
+                    print('')
                     
                     for index, string in enumerate(ko_array_value):
                         if index != 4:
-                            print ''.join(string.ljust(col_array[j])),
+                            print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                     raise
         elif user_input == 'n':
@@ -384,7 +397,7 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
     try:
         # Retrieve knowledge objects
         (ko_details, col_array) = retrieve_content(session_key, ko_name, owner, file)
-        user_input = raw_input('Do you want to move now?[y/n] ').lower()
+        user_input = input('Do you want to move now?[y/n] ').lower()
         
         if user_input == 'y':
             col_array.append(9)
@@ -395,10 +408,10 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
             # Print first 2 array from ko_details and ignore 4th column "List URL" while printing.
             for row in ko_details[:2]:
                 j = 0
-                print ''
+                print('')
                 for index, string in enumerate(row):
                     if index != 4:
-                        print ''.join(string.ljust(col_array[j])),
+                        print(''.join(string.ljust(col_array[j])), end=' ')
                     j = j + 1
 			
             # Move app and print column starting from 3rd array and ignore 4th column "List URL" while printing.
@@ -422,22 +435,22 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
                     ko_details[data_index].append('Moved')
                     ko_array_value = ko_details[data_index]
                     j = 0
-                    print ''
+                    print('')
                     
                     for index, string in enumerate(ko_array_value):
                         if index != 4:
-                            print ''.join(string.ljust(col_array[j])),
+                            print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                 except:
                     data_index = ko_details.index(row)
                     ko_details[data_index].append('Failed')
                     ko_array_value = ko_details[data_index]
                     j = 0
-                    print ''
+                    print('')
                     
                     for index, string in enumerate(ko_array_value):
                         if index != 4:
-                            print ''.join(string.ljust(col_array[j])),
+                            print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                     raise
         elif user_input == 'n':
