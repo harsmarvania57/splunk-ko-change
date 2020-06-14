@@ -1,7 +1,9 @@
 from __future__ import print_function
 from builtins import input
 from io import open
+import os
 import sys
+import splunk
 import splunk.rest as rest
 import splunk.auth as auth
 import splunk.entity as entity
@@ -40,16 +42,20 @@ def argument_parser():
         else:
             move_ko_subparser = move_parser.add_subparsers(dest='move_ko_name', required=True, help='Knowledge Object Choices')
         
-        ko_type_args = ['savedsearch', 'dashboard', 'lookupdef', 'lookupfile', 'tag', 'field_extraction', 'panel', 'field_transformation', 'workflow_action']
+        ko_type_args = ['macro', 'savedsearch', 'dashboard', 'lookupdef', 'lookupfile', 'tag', 'field_extraction', 'panel', 'field_transformation', 'workflow_action']
         
         for i in ko_type_args:
             lkp = list_ko_subparser.add_parser(i, help='To list ' + i)
             lkp_grp = lkp.add_mutually_exclusive_group(required=True)
+            lkp.add_argument('--filter', required=False, help='Filter by name')
+            lkp.add_argument('--host', required=False, help='Hostname of Splunk Server')
             lkp_grp.add_argument('--user', required=False, help='Username')
             lkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
             ckp = change_ko_subparser.add_parser(i, help='To change acl of ' + i)
             ckp_grp = ckp.add_mutually_exclusive_group(required=True)
             ckp_grp.add_argument('--olduser', required=False, help='Old Username')
+            ckp.add_argument('--filter', required=False, help='Filter by name')
+            ckp.add_argument('--host', required=False, help='Hostname of Splunk Server')
             ckp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
             ckp.add_argument('--newuser', required=False, help='New Username')
             ckp.add_argument('--sharing', required=False, help='New Sharing Permission')
@@ -58,6 +64,8 @@ def argument_parser():
             mkp = move_ko_subparser.add_parser(i, help='To move ' + i + ' to another app')
             mkp_grp = mkp.add_mutually_exclusive_group(required=True)
             mkp_grp.add_argument('--user', required=False, help='Username')
+            mkp.add_argument('--filter', required=False, help='Filter by name')
+            mkp.add_argument('--host', required=False, help='Hostname of Splunk Server')
             mkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
             mkp.add_argument('--app', required=True, help='Move KO to specified app')
             
@@ -69,7 +77,7 @@ def argument_parser():
         args = parser.parse_args()
         
         if args.subp_flag == 'list':
-            return args.subp_flag, args.list_ko_name, args.user, args.file
+            return args.subp_flag, args.list_ko_name, args.user, args.file, args.host, args.filter
         elif args.subp_flag == 'change':
             if (args.newuser != None or args.sharing != None or args.readperm != None or args.writeperm != None):
                 if args.sharing == 'user' and (args.readperm != None or args.writeperm != None):
@@ -86,8 +94,12 @@ def argument_parser():
 
 def user_check(ko_value):
     try:
-        username = input('Enter username with admin privileges: ')
-        password = getpass.getpass('Enter password: ')
+        username = os.environ.get('splunkusername','')
+        if username == "":
+            username = input('Enter username with admin privileges: ')
+        password = os.environ.get('splunkpassword','')
+        if password == "":
+            password = getpass.getpass('Enter password: ')
         session_key = auth.getSessionKey(username, password)
         
         # Check new owner exist or not
@@ -105,7 +117,7 @@ def user_check(ko_value):
 # Check Role
 def role_check(role):
     try:
-        getrole = auth.listRoles()
+        getrole = auth.listRoles(count=0)
         if role not in getrole:
             print('Role ' + role + ' not found in splunk')
             sys.exit(1)
@@ -126,8 +138,11 @@ def app_check(app, session_key):
         raise
 
 # Retrieve knowledge objects for user
-def retrieve_content(session_key, ko_name, owner, file=None):
+def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
     try:
+        # For Saved Searches
+        if ko_name == 'macro':
+            config_endpoint = '/servicesNS/-/-/configs/conf-macros?output_mode=json&count=0'
         # For Saved Searches
         if ko_name == 'savedsearch':
             config_endpoint = '/servicesNS/-/-/saved/searches?add_orphan_field=yes&count=0&output_mode=json'
@@ -155,6 +170,9 @@ def retrieve_content(session_key, ko_name, owner, file=None):
         # For Workflow Actions
         elif ko_name == 'workflow_action':
             config_endpoint = '/servicesNS/-/-/data/ui/workflow-actions?count=0&output_mode=json'
+        #,getargs={"f":filter}
+        if filter:
+            config_endpoint += "&search="+str(filter)
         (response, content) = rest.simpleRequest(config_endpoint, session_key)
     except:
         raise
@@ -166,7 +184,12 @@ def retrieve_content(session_key, ko_name, owner, file=None):
     # Search knowledge objects for user from all users output and append into ko_details list.
     for i in range(len(ko_config['entry'])):
         if owner:
-            author_name = ko_config['entry'][i]['author']
+
+            if 'author' in ko_config['entry'][i]:
+                author_name = ko_config['entry'][i]['author']
+            else:
+                author_name = owner
+
             if author_name == owner :
                 ko_title = ko_config['entry'][i]['name']
                 sharing = ko_config['entry'][i]['acl']['sharing']
@@ -234,7 +257,7 @@ def retrieve_content(session_key, ko_name, owner, file=None):
     else:
         print('Total ' + str(len(ko_details)-2) + ' ' + ko_name + ' found')
         col_array = []
-        
+
         # Searching maximum length for every row in each column and adding 2 for padding & store them into col_array list
         for col in zip(*ko_details):
             col_width = max(len(string) for string in col) + 2
@@ -463,16 +486,21 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
 def main():
     # Call argument_parser function and store returned value into ko_value variable
     ko_value = argument_parser()
-    
+    if ko_value[4]!="":
+        splunk.mergeHostPath(ko_value[4], True)
+
+
     session_key = user_check(ko_value)
     
     ko_name = ko_value[1]
     owner = ko_value[2]
     file = ko_value[3]
-    
+    host = ko_value[4]
+    filter = ko_value[5]
+
     # Retrieve knowledge objects
     if ko_value[0] == 'list':
-        retrieve_content(session_key, ko_name, owner, file)
+        retrieve_content(session_key, ko_name, owner, file, filter)
     elif ko_value[0] == 'change':
         new_owner = ko_value[4]
         sharing = ko_value[5]

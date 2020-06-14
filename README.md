@@ -19,7 +19,7 @@ Python script which is provided in this repo works fine on stand alone search he
   </thead>
   <tbody>
     <tr>
-      <td rowspan=3>- Savedsearch</br>- Dashboard</br>- Lookup File</br>- Lookup Definition</br>- Panel</br>- Field Transformation</br>- Workflow Action</td>
+      <td rowspan=3>- Macro</br>- Savedsearch</br>- Dashboard</br>- Lookup File</br>- Lookup Definition</br>- Panel</br>- Field Transformation</br>- Workflow Action</td>
       <td>Private</td>
       <td>:white_check_mark:</td>
       <td>:white_check_mark:</td>
@@ -91,6 +91,9 @@ positional arguments:
 
 optional arguments:
   -h, --help          show this help message and exit
+  --host              Specify remote server to connect to (defaults to local server)
+  --filter            Search filter to apply to output
+
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list -h
 usage: ko_change.py list [-h]
                          {savedsearch,dashboard,lookupdef,lookupfile,tag,field_extraction,panel,field_transformation,workflow_action}
@@ -112,6 +115,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --host                Specify remote server to connect to (defaults to local server)
+  --filter              Search filter to apply to output
+
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch -h
 usage: ko_change.py change savedsearch [-h] (--olduser OLDUSER | --file FILE)
                                        [--newuser NEWUSER] [--sharing SHARING]
@@ -120,6 +126,8 @@ usage: ko_change.py change savedsearch [-h] (--olduser OLDUSER | --file FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  --host                Specify remote server to connect to (defaults to local server)
+  --filter              Search filter to apply to output
   --olduser OLDUSER     Old Username
   --file FILE           Filename containing KO Title
   --newuser NEWUSER     New Username
