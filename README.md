@@ -72,6 +72,7 @@ Python script which is provided in this repo works fine on stand alone search he
 </table>
 
 **NOTE: When you change sharing permission from `user` to `app` or `global` and if you do not provide `--readperm` and `--writeperm` parameter while changing permission then by default it will inherit App read and write permission respectively.**
+**NOTE: When you use `filter` it will match that filter value with any parameter like title, search query, dashboard xml etc.**
 
 ### How to use script (Examples)
 #### To check which knowledge objects you can move using `ko_change.py` script and for available script parameter you can use help as given below
@@ -91,8 +92,6 @@ positional arguments:
 
 optional arguments:
   -h, --help          show this help message and exit
-  --host              Specify remote server to connect to (defaults to local server)
-  --filter            Search filter to apply to output
 
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list -h
 usage: ko_change.py list [-h]
@@ -115,21 +114,21 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --host                Specify remote server to connect to (defaults to local server)
-  --filter              Search filter to apply to output
 
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch -h
 usage: ko_change.py change savedsearch [-h] (--olduser OLDUSER | --file FILE)
+                                       [--filter FILTER] [--host HOST]
                                        [--newuser NEWUSER] [--sharing SHARING]
                                        [--readperm READPERM]
                                        [--writeperm WRITEPERM]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --host                Specify remote server to connect to (defaults to local server)
-  --filter              Search filter to apply to output
   --olduser OLDUSER     Old Username
   --file FILE           Filename containing KO Title
+  --filter FILTER       Filter by name
+  --host HOST           Specify splunk server to connect to (defaults to local
+                        server)
   --newuser NEWUSER     New Username
   --sharing SHARING     New Sharing Permission
   --readperm READPERM   New Read Permission of KO
@@ -144,7 +143,7 @@ In below example we will list savedsearch owned by "bob" user in all splunk apps
 ```
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --user bob
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 4 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -161,12 +160,12 @@ search        bob           Test_Savedsearch4   savedsearch   global        admi
 In below example we will list selected savedsearches owned by any user from all splunk apps. I have created `savedsearch.txt` file and mentioned `Test_Savedsearch2` and `Test_Savedsearch3` as given below.
 
 ```
-[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt 
+[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
 Test_Savedsearch3
-[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt 
+[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 2 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -183,7 +182,7 @@ In below example we will change savedsearches owned by user "bob" user to "kevin
 ```
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --olduser bob --newuser kevin
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 4 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -201,7 +200,28 @@ search        bob           Test_Savedsearch1   savedsearch   user          None
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed   
 search        bob           Test_Savedsearch3   savedsearch   app           *             admin         False         Changed   
 search        bob           Test_Savedsearch4   savedsearch   global        admin         admin         False         Changed  
-[splunk@splunkserver01 ~]$ 
+[splunk@splunkserver01 ~]$
+```
+
+#### To change owner of knowledge object owned by user and filter
+In below example we will change savedsearche owned by user "bob" user to "kevin" user in all splunk apps with filter "Test_Savedsearch1".
+
+```
+[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --olduser bob --newuser kevin --filter Test_Savedsearch1
+Enter username with admin privileges: admin
+Enter password:
+Total 1 savedsearch found
+
+App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
+search        bob           Test_Savedsearch1   savedsearch   user          None          None          False                 
+
+Do you want to change now?[y/n] y
+
+App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
+search        bob           Test_Savedsearch1   savedsearch   user          None          None          False         Changed   
+[splunk@splunkserver01 ~]$
 ```
 
 #### To change owner of selected knowledge object owned by any user
@@ -213,7 +233,7 @@ Test_Savedsearch2
 Test_Savedsearch3
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --newuser bob
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 2 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -227,18 +247,18 @@ App Name      Author Name   Title               Type of KO    Permission    Read
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        kevin         Test_Savedsearch2   savedsearch   user          None          None          False         Changed   
 search        kevin         Test_Savedsearch3   savedsearch   app           *             admin         False         Changed  
-[splunk@splunkserver01 ~]$ 
+[splunk@splunkserver01 ~]$
 ```
 
 #### To change owner, sharing permission and read & write permission of selected knowledge object owned by any user
 In below example we will change selected savedsearch owned by any user to "kevin" user, change sharing permission from `user` to `app` level and change read to everyone and write permission to `power` and `user` roles in all splunk apps. I have created `savedsearch.txt` file and mentioned `Test_Savedsearch2` as given below.
 
 ```
-[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt 
+[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --newuser kevin --readperm '*' --writeperm power,user --sharing app
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 1 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -251,9 +271,9 @@ App Name      Author Name   Title               Type of KO    Permission    Read
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed  
 [splunk@splunkserver01 ~]$
-[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt 
+[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 1 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -269,7 +289,7 @@ In below example we will move savedsearch owned by "bob" user from all splunk ap
 ```
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --user bob --app test_app
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 1 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -288,11 +308,11 @@ search        bob           Test_Savedsearch3   savedsearch   app           *   
 In below example we will move savedsearch owned by any user from all splunk apps to "test_app" app. I have created `savedsearch.txt` file and mentioned `Test_Savedsearch2` as given below.
 
 ```
-[splunk@splunkserver01 etc]$ cat /home/splunk/savedsearch.txt 
+[splunk@splunkserver01 etc]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --file /home/splunk/savedsearch.txt --app test_app
 Enter username with admin privileges: admin
-Enter password: 
+Enter password:
 Total 1 savedsearch found
 
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
@@ -304,5 +324,5 @@ Do you want to move now?[y/n] y
 App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        kevin         Test_Savedsearch2   savedsearch   app           *             power,user    False         Moved    
-[splunk@splunkserver01 etc]$ 
+[splunk@splunkserver01 etc]$
 ```

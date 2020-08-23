@@ -3,7 +3,7 @@ from builtins import input
 from io import open
 import os
 import sys
-import splunk
+from splunk import mergeHostPath
 import splunk.rest as rest
 import splunk.auth as auth
 import splunk.entity as entity
@@ -48,15 +48,15 @@ def argument_parser():
             lkp = list_ko_subparser.add_parser(i, help='To list ' + i)
             lkp_grp = lkp.add_mutually_exclusive_group(required=True)
             lkp.add_argument('--filter', required=False, help='Filter by name')
-            lkp.add_argument('--host', required=False, help='Hostname of Splunk Server')
+            lkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
             lkp_grp.add_argument('--user', required=False, help='Username')
             lkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
             ckp = change_ko_subparser.add_parser(i, help='To change acl of ' + i)
             ckp_grp = ckp.add_mutually_exclusive_group(required=True)
             ckp_grp.add_argument('--olduser', required=False, help='Old Username')
-            ckp.add_argument('--filter', required=False, help='Filter by name')
-            ckp.add_argument('--host', required=False, help='Hostname of Splunk Server')
             ckp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
+            ckp.add_argument('--filter', required=False, help='Filter by name')
+            ckp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
             ckp.add_argument('--newuser', required=False, help='New Username')
             ckp.add_argument('--sharing', required=False, help='New Sharing Permission')
             ckp.add_argument('--readperm', required=False, help='New Read Permission of KO')
@@ -64,9 +64,9 @@ def argument_parser():
             mkp = move_ko_subparser.add_parser(i, help='To move ' + i + ' to another app')
             mkp_grp = mkp.add_mutually_exclusive_group(required=True)
             mkp_grp.add_argument('--user', required=False, help='Username')
-            mkp.add_argument('--filter', required=False, help='Filter by name')
-            mkp.add_argument('--host', required=False, help='Hostname of Splunk Server')
             mkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
+            mkp.add_argument('--filter', required=False, help='Filter by name')
+            mkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
             mkp.add_argument('--app', required=True, help='Move KO to specified app')
             
         # Print help if no option provided
@@ -77,17 +77,17 @@ def argument_parser():
         args = parser.parse_args()
         
         if args.subp_flag == 'list':
-            return args.subp_flag, args.list_ko_name, args.user, args.file, args.host, args.filter
+            return args.subp_flag, args.list_ko_name, args.host, args.filter, args.user, args.file
         elif args.subp_flag == 'change':
             if (args.newuser != None or args.sharing != None or args.readperm != None or args.writeperm != None):
                 if args.sharing == 'user' and (args.readperm != None or args.writeperm != None):
                     parser.error('You can\'t supply --readperm or --writeperm or both with --sharing user')
                 else:
-                    return args.subp_flag, args.change_ko_name, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm
+                    return args.subp_flag, args.change_ko_name, args.host, args.filter, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm, args.host
             elif (args.newuser is None and args.sharing is None and args.readperm is None and args.writeperm is None):
                 parser.error('Atleast one argument is required (--newuser, --sharing, --readperm, --writeperm)')
         elif args.subp_flag == 'move':
-            return args.subp_flag, args.move_ko_name, args.user, args.file, args.app
+            return args.subp_flag, args.move_ko_name, args.host, args.filter, args.user, args.file, args.app
         
     except:
         raise
@@ -142,38 +142,45 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
     try:
         # For Saved Searches
         if ko_name == 'macro':
-            config_endpoint = '/servicesNS/-/-/configs/conf-macros?output_mode=json&count=0'
+            config_endpoint = '/servicesNS/-/-/configs/conf-macros'
         # For Saved Searches
         if ko_name == 'savedsearch':
-            config_endpoint = '/servicesNS/-/-/saved/searches?add_orphan_field=yes&count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/saved/searches'
         # For Dashboards
         elif ko_name == 'dashboard':
-            config_endpoint = '/servicesNS/-/-/data/ui/views?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/ui/views'
         # For Lookup Definitions
         elif ko_name == 'lookupdef':
-            config_endpoint = '/servicesNS/-/-/data/transforms/lookups?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/transforms/lookups'
         # For Lookup Files
         elif ko_name == 'lookupfile':
-            config_endpoint = '/servicesNS/-/-/data/lookup-table-files?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/lookup-table-files'
         # For Tags
         elif ko_name == 'tag':
-            config_endpoint = '/servicesNS/-/-/saved/fvtags?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/saved/fvtags'
         # For Field Extractions	
         elif ko_name == 'field_extraction':
-            config_endpoint = '/servicesNS/-/-/data/props/extractions?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/props/extractions'
         # For Panels
         elif ko_name == 'panel':
-            config_endpoint = '/servicesNS/-/-/data/ui/panels?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/ui/panels'
         # For Field Transformations
         elif ko_name == 'field_transformation':
-            config_endpoint = '/servicesNS/-/-/data/transforms/extractions?count=0&output_mode=json'
+            config_endpoint = '/servicesNS/-/-/data/transforms/extractions'
         # For Workflow Actions
         elif ko_name == 'workflow_action':
-            config_endpoint = '/servicesNS/-/-/data/ui/workflow-actions?count=0&output_mode=json'
-        #,getargs={"f":filter}
+            config_endpoint = '/servicesNS/-/-/data/ui/workflow-actions'
+        
+        # Get Argument
+        if ko_name == 'savedsearch':
+            get_argument = {'output_mode': 'json', 'count': 0, 'add_orphan_field': 'yes', 'f': 'title', 'f': 'orphan'}
+        else:
+            get_argument = {'output_mode': 'json', 'count': 0, 'f': 'title'}
+        
         if filter:
-            config_endpoint += "&search="+str(filter)
-        (response, content) = rest.simpleRequest(config_endpoint, session_key)
+            get_argument = json.loads(json.dumps(get_argument))
+            get_argument['search'] = str(filter)
+        (response, content) = rest.simpleRequest(config_endpoint, session_key, getargs=get_argument)
     except:
         raise
         
@@ -276,10 +283,10 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
         return ko_details, col_array
 
 # Change permission of knowledge objects 
-def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new_sharing=None, new_readperm=None, new_writeperm=None):
+def change_permission(session_key, ko_name, old_owner, new_owner, file=None, filter=None, new_sharing=None, new_readperm=None, new_writeperm=None):
     try:
         # Retrieve knowledge objects
-        (ko_details, col_array) = retrieve_content(session_key, ko_name, old_owner, file)
+        (ko_details, col_array) = retrieve_content(session_key, ko_name, old_owner, file, filter)
         user_input = input('Do you want to change now?[y/n] ').lower()
         
         if user_input == 'y':
@@ -407,6 +414,7 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
                             print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                     raise
+            print('\n')
         elif user_input == 'n':
             sys.exit(1)
         else:
@@ -416,10 +424,10 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, new
         
 
 # Move knowledge objects from one app to another app
-def move_app(session_key, ko_name, owner, file=None, new_appname=None):
+def move_app(session_key, ko_name, owner, file=None, filter=None, new_appname=None):
     try:
         # Retrieve knowledge objects
-        (ko_details, col_array) = retrieve_content(session_key, ko_name, owner, file)
+        (ko_details, col_array) = retrieve_content(session_key, ko_name, owner, file, filter)
         user_input = input('Do you want to move now?[y/n] ').lower()
         
         if user_input == 'y':
@@ -476,6 +484,7 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
                             print(''.join(string.ljust(col_array[j])), end=' ')
                         j = j + 1
                     raise
+            print('\n')
         elif user_input == 'n':
             sys.exit(1)
         else:
@@ -486,26 +495,25 @@ def move_app(session_key, ko_name, owner, file=None, new_appname=None):
 def main():
     # Call argument_parser function and store returned value into ko_value variable
     ko_value = argument_parser()
-    if ko_value[4]!="":
-        splunk.mergeHostPath(ko_value[4], True)
 
+    if ko_value[2]!="":
+        mergeHostPath(ko_value[2], True)
 
     session_key = user_check(ko_value)
     
     ko_name = ko_value[1]
-    owner = ko_value[2]
-    file = ko_value[3]
-    host = ko_value[4]
-    filter = ko_value[5]
+    filter = ko_value[3]
+    owner = ko_value[4]
+    file = ko_value[5]
 
     # Retrieve knowledge objects
     if ko_value[0] == 'list':
         retrieve_content(session_key, ko_name, owner, file, filter)
     elif ko_value[0] == 'change':
-        new_owner = ko_value[4]
-        sharing = ko_value[5]
-        read_perm = ko_value[6]
-        write_perm = ko_value[7]
+        new_owner = ko_value[6]
+        sharing = ko_value[7]
+        read_perm = ko_value[8]
+        write_perm = ko_value[9]
 
         if read_perm:
             if ',' in read_perm:
@@ -552,13 +560,13 @@ def main():
                         print ('You can\'t supply \'*\' with any other role in write permission')
                         sys.exit(1)
                 
-        change_permission(session_key, ko_name, owner, new_owner, file, sharing, read_perm, write_perm)
+        change_permission(session_key, ko_name, owner, new_owner, file, filter, sharing, read_perm, write_perm)
     elif ko_value[0] == 'move':
-        appname = ko_value[4]
+        appname = ko_value[6]
         if appname:
             app_check(appname, session_key)
         
-        move_app(session_key, ko_name, owner, file, appname)
+        move_app(session_key, ko_name, owner, file, filter, appname)
 		
 if __name__ == '__main__':
     try:
