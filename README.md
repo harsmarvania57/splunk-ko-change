@@ -287,7 +287,7 @@ search        kevin         Test_Savedsearch2   savedsearch   app           *   
 In below example we will move savedsearch owned by "bob" user from all splunk apps to "test_app" app.
 
 ```
-[splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --user bob --app test_app
+[splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --user bob --newapp test_app
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
@@ -310,7 +310,7 @@ In below example we will move savedsearch owned by any user from all splunk apps
 ```
 [splunk@splunkserver01 etc]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
-[splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --file /home/splunk/savedsearch.txt --app test_app
+[splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --file /home/splunk/savedsearch.txt --newapp test_app
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found

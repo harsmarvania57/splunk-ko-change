@@ -47,10 +47,10 @@ def argument_parser():
         for i in ko_type_args:
             lkp = list_ko_subparser.add_parser(i, help='To list ' + i)
             lkp_grp = lkp.add_mutually_exclusive_group(required=True)
-            lkp.add_argument('--filter', required=False, help='Filter by name')
-            lkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
             lkp_grp.add_argument('--user', required=False, help='Username')
             lkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
+            lkp.add_argument('--filter', required=False, help='Filter by name')
+            lkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
             ckp = change_ko_subparser.add_parser(i, help='To change acl of ' + i)
             ckp_grp = ckp.add_mutually_exclusive_group(required=True)
             ckp_grp.add_argument('--olduser', required=False, help='Old Username')
@@ -67,7 +67,7 @@ def argument_parser():
             mkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
             mkp.add_argument('--filter', required=False, help='Filter by name')
             mkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
-            mkp.add_argument('--app', required=True, help='Move KO to specified app')
+            mkp.add_argument('--newapp', required=True, help='Move KO to specified app')
             
         # Print help if no option provided
         if len(sys.argv) == 1:
@@ -83,16 +83,16 @@ def argument_parser():
                 if args.sharing == 'user' and (args.readperm != None or args.writeperm != None):
                     parser.error('You can\'t supply --readperm or --writeperm or both with --sharing user')
                 else:
-                    return args.subp_flag, args.change_ko_name, args.host, args.filter, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm, args.host
+                    return args.subp_flag, args.change_ko_name, args.host, args.filter, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm
             elif (args.newuser is None and args.sharing is None and args.readperm is None and args.writeperm is None):
                 parser.error('Atleast one argument is required (--newuser, --sharing, --readperm, --writeperm)')
         elif args.subp_flag == 'move':
-            return args.subp_flag, args.move_ko_name, args.host, args.filter, args.user, args.file, args.app
+            return args.subp_flag, args.move_ko_name, args.host, args.filter, args.user, args.file, args.newapp
         
     except:
         raise
 
-def user_check(ko_value):
+def user_check(ko_type=None, new_owner=None):
     try:
         username = os.environ.get('splunkusername','')
         if username == "":
@@ -103,8 +103,7 @@ def user_check(ko_value):
         session_key = auth.getSessionKey(username, password)
         
         # Check new owner exist or not
-        if ko_value[0] == 'change':
-            new_owner = ko_value[4]
+        if ko_type == 'change':
             if new_owner:
                 userlist = auth.getUser(name=new_owner)
                 if not userlist:
@@ -136,6 +135,36 @@ def app_check(app, session_key):
         return True
     except:
         raise
+
+# Filter and retrieve value from each knowledge object
+def ko_filter(ko_name, ko_details, ko_config, ko_payload):
+    author_name = ko_config['entry'][ko_payload]['author']
+    ko_title = ko_config['entry'][ko_payload]['name']
+    sharing = ko_config['entry'][ko_payload]['acl']['sharing']
+    app_name = ko_config['entry'][ko_payload]['acl']['app']
+    list_url = ko_config['entry'][ko_payload]['links']['list']
+    if ko_name == 'savedsearch':
+        orphan = str(ko_config['entry'][ko_payload]['content']['orphan'])
+    else:
+        orphan = 'N/A'
+                
+    if ko_config['entry'][ko_payload]['acl']['perms'] is not None:
+        if 'read' in ko_config['entry'][ko_payload]['acl']['perms']:
+            read_perm = ','.join(ko_config['entry'][ko_payload]['acl']['perms']['read'])
+        else:
+            read_perm = 'None'
+                    
+        if 'write' in ko_config['entry'][ko_payload]['acl']['perms']:
+            write_perm = ','.join(ko_config['entry'][ko_payload]['acl']['perms']['write'])
+        else:
+            write_perm = 'None'
+    else:
+        read_perm = 'None'
+        write_perm = 'None'
+                
+    if not ((ko_name == 'field_extraction' and sharing == 'user') or (ko_name == 'tag' and sharing == 'user')): 
+        ko_details.append([app_name, author_name, ko_title, ko_name, list_url, sharing, read_perm, write_perm, orphan])
+
 
 # Retrieve knowledge objects for user
 def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
@@ -191,38 +220,9 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
     # Search knowledge objects for user from all users output and append into ko_details list.
     for i in range(len(ko_config['entry'])):
         if owner:
-
-            if 'author' in ko_config['entry'][i]:
-                author_name = ko_config['entry'][i]['author']
-            else:
-                author_name = owner
-
+            author_name = ko_config['entry'][i]['author']
             if author_name == owner :
-                ko_title = ko_config['entry'][i]['name']
-                sharing = ko_config['entry'][i]['acl']['sharing']
-                app_name = ko_config['entry'][i]['acl']['app']
-                list_url = ko_config['entry'][i]['links']['list']
-                if ko_name == 'savedsearch':
-                    orphan = str(ko_config['entry'][i]['content']['orphan'])
-                else:
-                    orphan = 'N/A'
-                
-                if ko_config['entry'][i]['acl']['perms'] is not None:
-                    if 'read' in ko_config['entry'][i]['acl']['perms']:
-                        read_perm = ','.join(ko_config['entry'][i]['acl']['perms']['read'])
-                    else:
-                        read_perm = 'None'
-                    
-                    if 'write' in ko_config['entry'][i]['acl']['perms']:
-                        write_perm = ','.join(ko_config['entry'][i]['acl']['perms']['write'])
-                    else:
-                        write_perm = 'None'
-                else:
-                    read_perm = 'None'
-                    write_perm = 'None'
-                
-                if not ((ko_name == 'field_extraction' and sharing == 'user') or (ko_name == 'tag' and sharing == 'user')): 
-                    ko_details.append([app_name, author_name, ko_title, ko_name, list_url, sharing, read_perm, write_perm, orphan])
+                ko_filter(ko_name, ko_details, ko_config, i)
 
     
         if file:
@@ -231,31 +231,7 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
             for f_title in f_content:
                 ko_title = ko_config['entry'][i]['name']
                 if f_title == ko_title:
-                    author_name = ko_config['entry'][i]['author']
-                    sharing = ko_config['entry'][i]['acl']['sharing']
-                    app_name = ko_config['entry'][i]['acl']['app']
-                    list_url = ko_config['entry'][i]['links']['list']
-                    if ko_name == 'savedsearch':
-                        orphan = str(ko_config['entry'][i]['content']['orphan'])
-                    else:
-                        orphan = 'N/A'
-                    
-                    if ko_config['entry'][i]['acl']['perms'] is not None:
-                        if 'read' in ko_config['entry'][i]['acl']['perms']:
-                            read_perm = ','.join(ko_config['entry'][i]['acl']['perms']['read'])
-                        else:
-                            read_perm = 'None'
-                    
-                        if 'write' in ko_config['entry'][i]['acl']['perms']:
-                            write_perm = ','.join(ko_config['entry'][i]['acl']['perms']['write'])
-                        else:
-                            write_perm = 'None'
-                    else:
-                        read_perm = 'None'
-                        write_perm = 'None'
-                
-                    if not ((ko_name == 'field_extraction' and sharing == 'user') or (ko_name == 'tag' and sharing == 'user')): 
-                        ko_details.append([app_name, author_name, ko_title, ko_name, list_url, sharing, read_perm, write_perm, orphan])
+                    ko_filter(ko_name, ko_details, ko_config, i)
     
     # Check if user have any knowledge object or not and then print message and exit the script if no knowledge objects found.
     if len(ko_details) <= 2 :
@@ -498,22 +474,23 @@ def main():
 
     if ko_value[2]!="":
         mergeHostPath(ko_value[2], True)
-
-    session_key = user_check(ko_value)
     
+    ko_type = ko_value[0]
     ko_name = ko_value[1]
     filter = ko_value[3]
     owner = ko_value[4]
     file = ko_value[5]
 
     # Retrieve knowledge objects
-    if ko_value[0] == 'list':
+    if ko_type == 'list':
+        session_key = user_check(ko_type)
         retrieve_content(session_key, ko_name, owner, file, filter)
-    elif ko_value[0] == 'change':
+    elif ko_type == 'change':
         new_owner = ko_value[6]
         sharing = ko_value[7]
         read_perm = ko_value[8]
         write_perm = ko_value[9]
+        session_key = user_check(ko_type, new_owner)
 
         if read_perm:
             if ',' in read_perm:
@@ -561,12 +538,14 @@ def main():
                         sys.exit(1)
                 
         change_permission(session_key, ko_name, owner, new_owner, file, filter, sharing, read_perm, write_perm)
-    elif ko_value[0] == 'move':
-        appname = ko_value[6]
-        if appname:
-            app_check(appname, session_key)
+    elif ko_type == 'move':
+        new_appname = ko_value[6]
+        session_key = user_check(ko_type)
+
+        if new_appname:
+            app_check(new_appname, session_key)
         
-        move_app(session_key, ko_name, owner, file, filter, appname)
+        move_app(session_key, ko_name, owner, file, filter, new_appname)
 		
 if __name__ == '__main__':
     try:
