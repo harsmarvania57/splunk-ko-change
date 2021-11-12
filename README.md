@@ -142,6 +142,10 @@ In below example we will list savedsearch owned by "bob" user in all splunk apps
 
 ```
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --user bob
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 4 savedsearch found
@@ -164,6 +168,10 @@ In below example we will list selected savedsearches owned by any user from all 
 Test_Savedsearch2
 Test_Savedsearch3
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 2 savedsearch found
@@ -181,6 +189,10 @@ In below example we will change savedsearches owned by user "bob" user to "kevin
 
 ```
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --olduser bob --newuser kevin
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 4 savedsearch found
@@ -208,6 +220,10 @@ In below example we will change savedsearche owned by user "bob" user to "kevin"
 
 ```
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --olduser bob --newuser kevin --filter Test_Savedsearch1
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
@@ -232,6 +248,10 @@ In below example we will change selected savedsearches owned by any user to "bob
 Test_Savedsearch2
 Test_Savedsearch3
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --newuser bob
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 2 savedsearch found
@@ -257,6 +277,10 @@ In below example we will change selected savedsearch owned by any user to "kevin
 [splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --newuser kevin --readperm '*' --writeperm power,user --sharing app
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
@@ -272,6 +296,10 @@ App Name      Author Name   Title               Type of KO    Permission    Read
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed  
 [splunk@splunkserver01 ~]$
 [splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list savedsearch --file /home/splunk/savedsearch.txt
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
@@ -288,6 +316,10 @@ In below example we will move savedsearch owned by "bob" user from all splunk ap
 
 ```
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --user bob --newapp test_app
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
@@ -311,6 +343,10 @@ In below example we will move savedsearch owned by any user from all splunk apps
 [splunk@splunkserver01 etc]$ cat /home/splunk/savedsearch.txt
 Test_Savedsearch2
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py move savedsearch --file /home/splunk/savedsearch.txt --newapp test_app
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
 Total 1 savedsearch found
