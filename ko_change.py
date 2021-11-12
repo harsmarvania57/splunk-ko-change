@@ -94,13 +94,21 @@ def argument_parser():
 
 def user_check(ko_type=None, new_owner=None):
     try:
-        username = os.environ.get('splunkusername','')
-        if username == "":
-            username = input('Enter username with admin privileges: ')
-        password = os.environ.get('splunkpassword','')
-        if password == "":
-            password = getpass.getpass('Enter password: ')
-        session_key = auth.getSessionKey(username, password)
+        print('Authentication method:\n1.) Username and Password\n2.) Auth token')
+        auth_method = input('Please select authentication method (Enter 1 or 2): ')
+        if auth_method == '1':
+            username = os.environ.get('splunkusername','')
+            if username == '':
+                username = input('Enter username with admin privileges: ')
+            password = os.environ.get('splunkpassword','')
+            if password == '':
+                password = getpass.getpass('Enter password: ')
+            session_key = auth.getSessionKey(username, password)
+        elif auth_method == '2':
+            session_key = getpass.getpass('Enter token: ')
+        else:
+            print('Please respond with 1 or 2')
+            sys.exit(1)
         
         # Check new owner exist or not
         if ko_type == 'change':
