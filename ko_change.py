@@ -113,7 +113,7 @@ def user_check(ko_type=None, new_owner=None):
         # Check new owner exist or not
         if ko_type == 'change':
             if new_owner:
-                userlist = auth.getUser(name=new_owner)
+                userlist = auth.getUser(name=new_owner, sessionKey=session_key)
                 if not userlist:
                     print('New owner ' + new_owner + ' not found in splunk')
                     sys.exit(1)
