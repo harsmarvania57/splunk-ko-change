@@ -19,7 +19,7 @@ Python script which is provided in this repo works fine on stand alone search he
   </thead>
   <tbody>
     <tr>
-      <td rowspan=3>- Macro</br>- Savedsearch</br>- Dashboard</br>- Lookup File</br>- Lookup Definition</br>- Panel</br>- Field Transformation</br>- Workflow Action</td>
+      <td rowspan=3>- Macro</br>- Savedsearch</br>- Dashboard</br>- Lookup File</br>- Lookup Definition</br>- Panel</br>- Field Transformation</br>- Workflow Action</br>- Tag*</br>- Field Extraction*</td>
       <td>Private</td>
       <td>:white_check_mark:</td>
       <td>:white_check_mark:</td>
@@ -44,35 +44,13 @@ Python script which is provided in this repo works fine on stand alone search he
       <td>:white_check_mark:</td>
     </tr>
     <tr>
-      <td rowspan=3>- Tag</br>- Field Extraction</td>
-      <td>Private</td>
-      <td>:x:</td>
-      <td>:x:</td>
-      <td>:x:</td>
-      <td>:x:</td>
-      <td>:x:</td>
-    </tr>
-    <tr>
-      <td>App</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
-      <td>:white_check_mark:</td>
+      <td colspan=7>* For Tag & Field extraction private (user) sharing from one user to another user & moving it to another app will not work on some of the older versions of Splunk</td>
     </tr>
   </tbody>
 </table>
 
 **NOTE: When you change sharing permission from `user` to `app` or `global` and if you do not provide `--readperm` and `--writeperm` parameter while changing permission then by default it will inherit App read and write permission respectively.**
-**NOTE: When you use `filter` it will match that filter value with any parameter like title, search query, dashboard xml etc.**
+**NOTE: When you use `filter` without parameter it will match that filter value with any parameter like title, search query, dashboard xml etc.**
 
 ### How to use script (Examples)
 #### To check which knowledge objects you can move using `ko_change.py` script and for available script parameter you can use help as given below
@@ -95,12 +73,13 @@ optional arguments:
 
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py list -h
 usage: ko_change.py list [-h]
-                         {savedsearch,dashboard,lookupdef,lookupfile,tag,field_extraction,panel,field_transformation,workflow_action}
+                         {macro,savedsearch,dashboard,lookupdef,lookupfile,tag,field_extraction,panel,field_transformation,workflow_action}
                          ...
 
 positional arguments:
-  {savedsearch,dashboard,lookupdef,lookupfile,tag,field_extraction,panel,field_transformation,workflow_action}
+  {macro,savedsearch,dashboard,lookupdef,lookupfile,tag,field_extraction,panel,field_transformation,workflow_action}
                         Knowledge Object Choices
+    macro               To list macro
     savedsearch         To list savedsearch
     dashboard           To list dashboard
     lookupdef           To list lookupdef
@@ -118,7 +97,8 @@ optional arguments:
 [splunk@splunkserver01 etc]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch -h
 usage: ko_change.py change savedsearch [-h] (--olduser OLDUSER | --file FILE)
                                        [--filter FILTER] [--host HOST]
-                                       [--newuser NEWUSER] [--sharing SHARING]
+                                       [--count COUNT] [--newuser NEWUSER]
+                                       [--sharing SHARING]
                                        [--readperm READPERM]
                                        [--writeperm WRITEPERM]
 
@@ -129,6 +109,7 @@ optional arguments:
   --filter FILTER       Filter by name
   --host HOST           Specify splunk server to connect to (defaults to local
                         server)
+  --count COUNT         Number of KO to pull in single request (default 30)
   --newuser NEWUSER     New Username
   --sharing SHARING     New Sharing Permission
   --readperm READPERM   New Read Permission of KO
@@ -148,9 +129,13 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 4 savedsearch found
+Fetched 4 out of total 4 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 4 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch1   savedsearch   user          None          None          False         
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         
@@ -174,9 +159,15 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 2 savedsearch found
+Fetched 30 out of total 85 knowledge objects.
+Fetched 60 out of total 85 knowledge objects.
+Fetched 85 out of total 85 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 2 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         
 search        kevin         Test_Savedsearch3   savedsearch   app           *             admin         False         
@@ -195,9 +186,13 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 4 savedsearch found
+Fetched 4 out of total 4 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 4 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch1   savedsearch   user          None          None          False         
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         
@@ -206,7 +201,7 @@ search        bob           Test_Savedsearch4   savedsearch   global        admi
 
 Do you want to change now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        bob           Test_Savedsearch1   savedsearch   user          None          None          False         Changed   
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed   
@@ -226,18 +221,51 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 1 savedsearch found
+Fetched 1 out of total 1 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 1 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch1   savedsearch   user          None          None          False                 
 
 Do you want to change now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        bob           Test_Savedsearch1   savedsearch   user          None          None          False         Changed   
 [splunk@splunkserver01 ~]$
+
+
+[splunk@splunkserver01 ~]$ cat /home/splunk/savedsearch.txt
+Test_Savedsearch2
+Test_Savedsearch3
+[splunk@splunkserver01 ~]$ /opt/splunk/bin/splunk cmd python /home/splunk/ko_change.py change savedsearch --file /home/splunk/savedsearch.txt --filter "eai:acl.owner=bob" --filter "eai:acl.app=search" --newuser kevin
+Authentication method:
+1.) Username and Password
+2.) Auth token
+Please select authentication method (Enter 1 or 2): 1
+Enter username with admin privileges: admin
+Enter password:
+Fetched 4 out of total 4 knowledge objects.
+
+--------------------------------
+Total 2 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
+===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
+search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         
+search        bob           Test_Savedsearch3   savedsearch   app           *             admin         False
+
+Do you want to change now?[y/n] y
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
+===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
+search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed
+search        bob           Test_Savedsearch3   savedsearch   app           *             admin         False         Changed          
 ```
 
 #### To change owner of selected knowledge object owned by any user
@@ -254,16 +282,22 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 2 savedsearch found
+Fetched 30 out of total 85 knowledge objects.
+Fetched 60 out of total 85 knowledge objects.
+Fetched 85 out of total 85 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 2 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        kevin         Test_Savedsearch2   savedsearch   user          None          None          False         
 search        kevin         Test_Savedsearch3   savedsearch   app           *             admin         False         
 
 Do you want to change now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        kevin         Test_Savedsearch2   savedsearch   user          None          None          False         Changed   
 search        kevin         Test_Savedsearch3   savedsearch   app           *             admin         False         Changed  
@@ -283,15 +317,21 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 1 savedsearch found
+Fetched 30 out of total 85 knowledge objects.
+Fetched 60 out of total 85 knowledge objects.
+Fetched 85 out of total 85 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 1 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         
 
 Do you want to change now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        bob           Test_Savedsearch2   savedsearch   user          None          None          False         Changed  
 [splunk@splunkserver01 ~]$
@@ -302,9 +342,15 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 1 savedsearch found
+Fetched 30 out of total 85 knowledge objects.
+Fetched 60 out of total 85 knowledge objects.
+Fetched 85 out of total 85 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 1 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        kevin         Test_Savedsearch2   savedsearch   app           *             power,user    False         
 
@@ -322,15 +368,19 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 1 savedsearch found
+Fetched 1 out of total 1 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 1 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        bob           Test_Savedsearch3   savedsearch   app           *             admin         False         
 
 Do you want to move now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        bob           Test_Savedsearch3   savedsearch   app           *             admin         False         Moved    
 [splunk@splunkserver01 etc]$
@@ -349,15 +399,21 @@ Authentication method:
 Please select authentication method (Enter 1 or 2): 1
 Enter username with admin privileges: admin
 Enter password:
-Total 1 savedsearch found
+Fetched 30 out of total 85 knowledge objects.
+Fetched 60 out of total 85 knowledge objects.
+Fetched 85 out of total 85 knowledge objects.
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        
+--------------------------------
+Total 1 savedsearch found
+--------------------------------
+
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   
 search        kevin         Test_Savedsearch2   savedsearch   app           *             power,user    False         
 
 Do you want to move now?[y/n] y
 
-App Name      Author Name   Title               Type of KO    Permission    Read Perm     Write Perm    Orphan        Status    
+App Name      Author Name   Title               Type of KO    Sharing       Read Perm     Write Perm    Orphan        Status    
 ===========   ===========   ===========         ===========   ===========   ===========   ===========   ===========   ========  
 search        kevin         Test_Savedsearch2   savedsearch   app           *             power,user    False         Moved    
 [splunk@splunkserver01 etc]$

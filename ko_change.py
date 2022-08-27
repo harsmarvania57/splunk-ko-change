@@ -48,15 +48,17 @@ def argument_parser():
             lkp = list_ko_subparser.add_parser(i, help='To list ' + i)
             lkp_grp = lkp.add_mutually_exclusive_group(required=True)
             lkp_grp.add_argument('--user', required=False, help='Username')
-            lkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
-            lkp.add_argument('--filter', required=False, help='Filter by name')
+            lkp_grp.add_argument('--file', required=False, help='Filename containing KO title')
+            lkp.add_argument('--filter', required=False, help='Filter by name', action='append')
             lkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
+            lkp.add_argument('--count', required=False, help='Number of KO to pull in single request (default 30)', default=30)
             ckp = change_ko_subparser.add_parser(i, help='To change acl of ' + i)
             ckp_grp = ckp.add_mutually_exclusive_group(required=True)
             ckp_grp.add_argument('--olduser', required=False, help='Old Username')
-            ckp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
-            ckp.add_argument('--filter', required=False, help='Filter by name')
+            ckp_grp.add_argument('--file', required=False, help='Filename containing KO title')
+            ckp.add_argument('--filter', required=False, help='Filter by name', action='append')
             ckp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
+            ckp.add_argument('--count', required=False, help='Number of KO to pull in single request (default 30)', default=30)
             ckp.add_argument('--newuser', required=False, help='New Username')
             ckp.add_argument('--sharing', required=False, help='New Sharing Permission')
             ckp.add_argument('--readperm', required=False, help='New Read Permission of KO')
@@ -64,9 +66,10 @@ def argument_parser():
             mkp = move_ko_subparser.add_parser(i, help='To move ' + i + ' to another app')
             mkp_grp = mkp.add_mutually_exclusive_group(required=True)
             mkp_grp.add_argument('--user', required=False, help='Username')
-            mkp_grp.add_argument('--file', required=False, help='Filename containing KO Title')
-            mkp.add_argument('--filter', required=False, help='Filter by name')
+            mkp_grp.add_argument('--file', required=False, help='Filename containing KO title')
+            mkp.add_argument('--filter', required=False, help='Filter by name', action='append')
             mkp.add_argument('--host', required=False, help='Specify splunk server to connect to (defaults to local server)')
+            mkp.add_argument('--count', required=False, help='Number of KO to pull in single request (default 30)', default=30)
             mkp.add_argument('--newapp', required=True, help='Move KO to specified app')
             
         # Print help if no option provided
@@ -77,17 +80,17 @@ def argument_parser():
         args = parser.parse_args()
         
         if args.subp_flag == 'list':
-            return args.subp_flag, args.list_ko_name, args.host, args.filter, args.user, args.file
+            return args.subp_flag, args.list_ko_name, args.host, args.filter, args.count, args.user, args.file
         elif args.subp_flag == 'change':
             if (args.newuser != None or args.sharing != None or args.readperm != None or args.writeperm != None):
                 if args.sharing == 'user' and (args.readperm != None or args.writeperm != None):
                     parser.error('You can\'t supply --readperm or --writeperm or both with --sharing user')
                 else:
-                    return args.subp_flag, args.change_ko_name, args.host, args.filter, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm
+                    return args.subp_flag, args.change_ko_name, args.host, args.filter, args.count, args.olduser, args.file, args.newuser, args.sharing, args.readperm, args.writeperm
             elif (args.newuser is None and args.sharing is None and args.readperm is None and args.writeperm is None):
                 parser.error('Atleast one argument is required (--newuser, --sharing, --readperm, --writeperm)')
         elif args.subp_flag == 'move':
-            return args.subp_flag, args.move_ko_name, args.host, args.filter, args.user, args.file, args.newapp
+            return args.subp_flag, args.move_ko_name, args.host, args.filter, args.count, args.user, args.file, args.newapp
         
     except:
         raise
@@ -115,7 +118,7 @@ def user_check(ko_type=None, new_owner=None):
             if new_owner:
                 userlist = auth.getUser(name=new_owner, sessionKey=session_key)
                 if not userlist:
-                    print('New owner ' + new_owner + ' not found in splunk')
+                    print('New owner {0} not found in splunk'.format(new_owner))
                     sys.exit(1)
         return session_key
     except:
@@ -126,7 +129,7 @@ def role_check(role):
     try:
         getrole = auth.listRoles(count=0)
         if role not in getrole:
-            print('Role ' + role + ' not found in splunk')
+            print('Role {0} not found in splunk'.format(role))
             sys.exit(1)
         return True
     except:
@@ -138,44 +141,47 @@ def app_check(app, session_key):
         getapp = list(entity.getEntities('apps/local', search='visible=1 AND disabled=0', namespace=None, count=-1, sessionKey=session_key).keys())
         
         if app not in getapp:
-            print('App ' + app + ' not found in splunk')
+            print('App {0} not found in splunk'.format(app))
             sys.exit(1)
         return True
     except:
         raise
 
 # Filter and retrieve value from each knowledge object
-def ko_filter(ko_name, ko_details, ko_config, ko_payload):
-    author_name = ko_config['entry'][ko_payload]['author']
-    ko_title = ko_config['entry'][ko_payload]['name']
-    sharing = ko_config['entry'][ko_payload]['acl']['sharing']
-    app_name = ko_config['entry'][ko_payload]['acl']['app']
-    list_url = ko_config['entry'][ko_payload]['links']['list']
+def ko_filter(ko_name, ko_details, ko_config, ko_payload, instance_type, splunk_version):
+    author_name = ko_config[ko_payload]['author']
+    ko_title = ko_config[ko_payload]['name']
+    sharing = ko_config[ko_payload]['acl']['sharing']
+    app_name = ko_config[ko_payload]['acl']['app']
+    list_url = ko_config[ko_payload]['links']['list']
     if ko_name == 'savedsearch':
-        orphan = str(ko_config['entry'][ko_payload]['content']['orphan'])
+        orphan = str(ko_config[ko_payload]['content']['orphan'])
     else:
         orphan = 'N/A'
                 
-    if ko_config['entry'][ko_payload]['acl']['perms'] is not None:
-        if 'read' in ko_config['entry'][ko_payload]['acl']['perms']:
-            read_perm = ','.join(ko_config['entry'][ko_payload]['acl']['perms']['read'])
+    if ko_config[ko_payload]['acl']['perms'] is not None:
+        if 'read' in ko_config[ko_payload]['acl']['perms']:
+            read_perm = ','.join(ko_config[ko_payload]['acl']['perms']['read'])
         else:
             read_perm = 'None'
                     
-        if 'write' in ko_config['entry'][ko_payload]['acl']['perms']:
-            write_perm = ','.join(ko_config['entry'][ko_payload]['acl']['perms']['write'])
+        if 'write' in ko_config[ko_payload]['acl']['perms']:
+            write_perm = ','.join(ko_config[ko_payload]['acl']['perms']['write'])
         else:
             write_perm = 'None'
     else:
         read_perm = 'None'
         write_perm = 'None'
                 
-    if not ((ko_name == 'field_extraction' and sharing == 'user') or (ko_name == 'tag' and sharing == 'user')): 
+    if (instance_type == 'cloud' and splunk_version >= (8, 2, 2109)) or (instance_type is None and ((splunk_version >= (8, 1, 7) and splunk_version < (8, 2, 0)) or (splunk_version >= (8, 2, 3)))):
         ko_details.append([app_name, author_name, ko_title, ko_name, list_url, sharing, read_perm, write_perm, orphan])
+    else:
+        if not ((ko_name == 'field_extraction' and sharing == 'user') or (ko_name == 'tag' and sharing == 'user')):
+            ko_details.append([app_name, author_name, ko_title, ko_name, list_url, sharing, read_perm, write_perm, orphan])
 
 
 # Retrieve knowledge objects for user
-def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
+def retrieve_content(session_key, ko_name, owner, count, file=None, filter=None):
     try:
         # For Saved Searches
         if ko_name == 'macro':
@@ -210,43 +216,75 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
         
         # Get Argument
         if ko_name == 'savedsearch':
-            get_argument = {'output_mode': 'json', 'count': 0, 'add_orphan_field': 'yes', 'f': 'title', 'f': 'orphan'}
+            get_argument = {'output_mode': 'json', 'count': count, 'offset': 0, 'add_orphan_field': 'yes', 'f': 'title', 'f': 'orphan'}
         else:
-            get_argument = {'output_mode': 'json', 'count': 0, 'f': 'title'}
+            get_argument = {'output_mode': 'json', 'count': count, 'offset': 0, 'f': 'title'}
         
         if filter:
             get_argument = json.loads(json.dumps(get_argument))
-            get_argument['search'] = str(filter)
+            get_argument['search'] = filter
+
+        # Fetch knowledge objects from Splunk using REST API with pagination
         (response, content) = rest.simpleRequest(config_endpoint, session_key, getargs=get_argument)
+        json_content = json.loads(content)
+        total_count = json_content['paging']['total']
+        ko_config = []
+        content_length = 0
+        for i in json_content['entry']:
+            ko_config.append(i)
+            content_length += 1
+        print('Fetched {0} out of total {1} knowledge objects.'.format(content_length, total_count))
+        offset = count
+        while offset < total_count:
+            content_length = 0
+            get_argument['offset'] = offset
+            (response, content) = rest.simpleRequest(config_endpoint, session_key, getargs=get_argument)
+            json_content = json.loads(content)
+            for i in json_content['entry']:
+                ko_config.append(i)
+                content_length += 1
+            print('Fetched {0} out of total {1} knowledge objects.'.format(offset + content_length, total_count))
+            offset = offset + count
     except:
         raise
-        
-    ko_config = json.loads(content)
-    ko_details.append(['App Name', 'Author Name', 'Title', 'Type of KO', 'List URL', 'Permission', 'Read Perm', 'Write Perm', 'Orphan'])
+   
+    ko_details.append(['App Name', 'Author Name', 'Title', 'Type of KO', 'List URL', 'Sharing', 'Read Perm', 'Write Perm', 'Orphan'])
     ko_details.append(['===========', '===========', '===========', '===========', '===========', '===========', '===========', '===========', '==========='])
-    
+
+    #Pull Splunk version and host
+    (response, content) = rest.simpleRequest('/services/server/info', session_key, getargs={'output_mode': 'json'})
+    json_content = json.loads(content)
+    if 'instance_type' in json_content['entry'][0]['content']:
+        instance_type = json_content['entry'][0]['content']['instance_type']
+    else:
+        instance_type = None
+    splunk_version = tuple(map(int, (json_content['entry'][0]['content']['version']).split('.')))
+
     # Search knowledge objects for user from all users output and append into ko_details list.
-    for i in range(len(ko_config['entry'])):
+    for i in range(len(ko_config)):
         if owner:
-            author_name = ko_config['entry'][i]['author']
-            if author_name == owner :
-                ko_filter(ko_name, ko_details, ko_config, i)
+            #author_name = ko_config[i]['author']
+            #if author_name == owner :
+            #    ko_filter(ko_name, ko_details, ko_config, i, instance_type, splunk_version)
+            ko_filter(ko_name, ko_details, ko_config, i, instance_type, splunk_version)
 
     
         if file:
             with open(file, encoding='utf-8') as read_f:
                 f_content = read_f.read().splitlines()
             for f_title in f_content:
-                ko_title = ko_config['entry'][i]['name']
+                ko_title = ko_config[i]['name']
                 if f_title == ko_title:
-                    ko_filter(ko_name, ko_details, ko_config, i)
+                    ko_filter(ko_name, ko_details, ko_config, i, instance_type, splunk_version)
     
     # Check if user have any knowledge object or not and then print message and exit the script if no knowledge objects found.
     if len(ko_details) <= 2 :
-        print('No ' + ko_name + ' found')
+        print('No {0} found'.format(ko_name))
         sys.exit(1)
     else:
-        print('Total ' + str(len(ko_details)-2) + ' ' + ko_name + ' found')
+        print('\n--------------------------------')
+        print('Total {0} {1} found'.format(len(ko_details)-2,ko_name))
+        print('--------------------------------')
         col_array = []
 
         # Searching maximum length for every row in each column and adding 2 for padding & store them into col_array list
@@ -267,10 +305,10 @@ def retrieve_content(session_key, ko_name, owner, file=None, filter=None):
         return ko_details, col_array
 
 # Change permission of knowledge objects 
-def change_permission(session_key, ko_name, old_owner, new_owner, file=None, filter=None, new_sharing=None, new_readperm=None, new_writeperm=None):
+def change_permission(session_key, ko_name, old_owner, new_owner, count, file=None, filter=None, new_sharing=None, new_readperm=None, new_writeperm=None):
     try:
         # Retrieve knowledge objects
-        (ko_details, col_array) = retrieve_content(session_key, ko_name, old_owner, file, filter)
+        (ko_details, col_array) = retrieve_content(session_key, ko_name, old_owner, count, file, filter)
         user_input = input('Do you want to change now?[y/n] ').lower()
         
         if user_input == 'y':
@@ -408,10 +446,10 @@ def change_permission(session_key, ko_name, old_owner, new_owner, file=None, fil
         
 
 # Move knowledge objects from one app to another app
-def move_app(session_key, ko_name, owner, file=None, filter=None, new_appname=None):
+def move_app(session_key, ko_name, owner, count, file=None, filter=None, new_appname=None):
     try:
         # Retrieve knowledge objects
-        (ko_details, col_array) = retrieve_content(session_key, ko_name, owner, file, filter)
+        (ko_details, col_array) = retrieve_content(session_key, ko_name, owner, count, file, filter)
         user_input = input('Do you want to move now?[y/n] ').lower()
         
         if user_input == 'y':
@@ -486,18 +524,24 @@ def main():
     ko_type = ko_value[0]
     ko_name = ko_value[1]
     filter = ko_value[3]
-    owner = ko_value[4]
-    file = ko_value[5]
+    count = int(ko_value[4])
+    owner = ko_value[5]
+    file = ko_value[6]
+    if owner is not None:
+        if filter is None:
+            filter = ['eai:acl.owner={0}'.format(owner)]
+        else:
+            filter.append('eai:acl.owner={0}'.format(owner))
 
     # Retrieve knowledge objects
     if ko_type == 'list':
         session_key = user_check(ko_type)
-        retrieve_content(session_key, ko_name, owner, file, filter)
+        retrieve_content(session_key, ko_name, owner, count, file, filter)
     elif ko_type == 'change':
-        new_owner = ko_value[6]
-        sharing = ko_value[7]
-        read_perm = ko_value[8]
-        write_perm = ko_value[9]
+        new_owner = ko_value[7]
+        sharing = ko_value[8]
+        read_perm = ko_value[9]
+        write_perm = ko_value[10]
         session_key = user_check(ko_type, new_owner)
 
         if read_perm:
@@ -545,15 +589,15 @@ def main():
                         print ('You can\'t supply \'*\' with any other role in write permission')
                         sys.exit(1)
                 
-        change_permission(session_key, ko_name, owner, new_owner, file, filter, sharing, read_perm, write_perm)
+        change_permission(session_key, ko_name, owner, new_owner, count, file, filter, sharing, read_perm, write_perm)
     elif ko_type == 'move':
-        new_appname = ko_value[6]
+        new_appname = ko_value[7]
         session_key = user_check(ko_type)
 
         if new_appname:
             app_check(new_appname, session_key)
         
-        move_app(session_key, ko_name, owner, file, filter, new_appname)
+        move_app(session_key, ko_name, owner, count, file, filter, new_appname)
 		
 if __name__ == '__main__':
     try:
